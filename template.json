@@ -1,0 +1,68 @@
+{
+  "plan": {
+    "name": "Plan tygodniowy",
+    "createdAt": "2026-03-25T10:00:00Z",
+    "workouts": [
+      {
+        "id": "w1",
+        "name": "Full Body Beginner",
+        "description": "Prosty trening całego ciała",
+
+        "scheduledAt": "2026-03-26T18:00:00Z",
+
+        "sets": [
+          {
+            "setNumber": 1,
+            "type": "circuit",
+            "rounds": 3,
+
+            "restBetweenRoundsSeconds": 90,
+            "restAfterSetSeconds": 180,
+
+            "exercises": [
+              {
+                "name": "Pompki",
+                "description": "Klasyczne pompki",
+                "reps": 12,
+                "equipment": null
+              },
+              {
+                "name": "Podciąganie",
+                "description": "Nachwytem",
+                "reps": 6,
+                "equipment": "drążek"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "w2",
+        "name": "Lower Body",
+        "description": "Trening nóg",
+
+        "scheduledAt": "2026-03-28T17:00:00Z",
+
+        "sets": [
+          {
+            "setNumber": 1,
+            "type": "standard",
+            "rounds": 4,
+
+            "restBetweenRoundsSeconds": 120,
+            "restAfterSetSeconds": 180,
+
+            "exercises": [
+              {
+                "name": "Przysiady",
+                "description": "Z kettlebell",
+                "reps": 10,
+                "equipment": "kettlebell 20kg"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
