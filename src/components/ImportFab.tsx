@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import {
   Fab,
   Box,
+  Stack,
   Snackbar,
   Alert,
   Dialog,
@@ -20,38 +21,12 @@ import type { WorkoutPlan } from "../types/workout";
 
 const NEW_WORKOUTS_STORAGE_KEY = "mobile-trainer:new-workout-ids";
 
-function saveImportedWorkoutIds(ids: string[]) {
-  if (!ids.length) return;
-
-  try {
-    const raw = sessionStorage.getItem(NEW_WORKOUTS_STORAGE_KEY);
-    const existing = raw ? (JSON.parse(raw) as string[]) : [];
-    const merged = Array.from(new Set([...(existing || []), ...ids]));
-    sessionStorage.setItem(NEW_WORKOUTS_STORAGE_KEY, JSON.stringify(merged));
-  } catch {
-    // no-op: local UI hint should not break import flow
-  }
-}
-
-export default function ImportFab() {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const { user } = useAuth();
-  const [open, setOpen] = useState(false);
-  const [msg, setMsg] = useState("");
-
-  const onChoose = () => inputRef.current?.click();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [pasteValue, setPasteValue] = useState(`{
-  "plan": {
-    "name": "Plan tygodniowy",
-    "createdAt": "2026-03-25T10:00:00Z",
+const TEMPLATE_JSON = `{
     "workouts": [
       {
         "name": "Full Body Beginner",
         "description": "Prosty trening całego ciała",
-
         "scheduledAt": "2026-03-26T18:00:00Z",
-
         "sets": [
           {
             "setNumber": 1,
@@ -105,8 +80,53 @@ export default function ImportFab() {
         ]
       }
     ]
+}`;
+
+function saveImportedWorkoutIds(ids: string[]) {
+  if (!ids.length) return;
+
+  try {
+    const raw = sessionStorage.getItem(NEW_WORKOUTS_STORAGE_KEY);
+    const existing = raw ? (JSON.parse(raw) as string[]) : [];
+    const merged = Array.from(new Set([...(existing || []), ...ids]));
+    sessionStorage.setItem(NEW_WORKOUTS_STORAGE_KEY, JSON.stringify(merged));
+  } catch {
+    // no-op: local UI hint should not break import flow
   }
-}`);
+}
+
+export default function ImportFab() {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const onChoose = () => inputRef.current?.click();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [pasteValue, setPasteValue] = useState(TEMPLATE_JSON);
+
+  const downloadTemplate = () => {
+    const blob = new Blob([TEMPLATE_JSON], { type: "application/json" });
+    const href = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = href;
+    link.download = "template.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(href);
+  };
+
+  const copyTemplate = async () => {
+    try {
+      await navigator.clipboard.writeText(TEMPLATE_JSON);
+      setMsg("Zawartość szablonu skopiowana do schowka");
+      setOpen(true);
+    } catch {
+      setMsg("Nie udało się skopiować do schowka");
+      setOpen(true);
+    }
+  };
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -120,16 +140,21 @@ export default function ImportFab() {
       if (validationErrors.length) {
         throw new Error(
           `Nieprawidłowy format pliku. Błędy walidacji:\n${validationErrors.join(
-            "\n"
-          )}`
+            "\n",
+          )}`,
         );
       }
       if (!user) throw new Error("Nie jesteś zalogowany");
 
+      const workouts = parsed.workouts ?? parsed.plan?.workouts;
+      if (!workouts || !Array.isArray(workouts)) {
+        throw new Error("Nieprawidłowy format pliku. Brak workouts.");
+      }
+
       const uid = user.uid;
       const colRef = collection(db, "users", uid, "workouts");
-      const batchPromises = parsed.plan.workouts.map((workout) =>
-        addDoc(colRef, { ...workout, createdAt: serverTimestamp() })
+      const batchPromises = workouts.map((workout) =>
+        addDoc(colRef, { ...workout, createdAt: serverTimestamp() }),
       );
 
       const refs = await Promise.all(batchPromises);
@@ -149,13 +174,9 @@ export default function ImportFab() {
 
   function validateWorkoutPlan(parsed: WorkoutPlan) {
     const errs: string[] = [];
-    if (!parsed || !parsed.plan) {
-      errs.push("Brak pola `plan`.");
-      return errs;
-    }
-    const workouts = parsed.plan.workouts;
+    const workouts = parsed.workouts ?? parsed.plan?.workouts;
     if (!workouts || !Array.isArray(workouts)) {
-      errs.push("Brak pola `plan.workouts` lub nie jest tablicą.");
+      errs.push("Brak pola `workouts` lub `plan.workouts` (nie jest tablicą).");
       return errs;
     }
     workouts.forEach((w, wi) => {
@@ -198,15 +219,16 @@ export default function ImportFab() {
   const importFromText = async (text: string) => {
     try {
       const parsed = JSON.parse(text) as WorkoutPlan;
-      if (!parsed?.plan?.workouts || !Array.isArray(parsed.plan.workouts)) {
-        throw new Error("Nieprawidłowy format pliku. Brak plan.workouts");
+      const workouts = parsed.workouts ?? parsed.plan?.workouts;
+      if (!workouts || !Array.isArray(workouts)) {
+        throw new Error("Nieprawidłowy format pliku. Brak workouts.");
       }
       if (!user) throw new Error("Nie jesteś zalogowany");
 
       const uid = user.uid;
       const colRef = collection(db, "users", uid, "workouts");
-      const batchPromises = parsed.plan.workouts.map((workout) =>
-        addDoc(colRef, { ...workout, createdAt: serverTimestamp() })
+      const batchPromises = workouts.map((workout) =>
+        addDoc(colRef, { ...workout, createdAt: serverTimestamp() }),
       );
 
       const refs = await Promise.all(batchPromises);
@@ -251,16 +273,24 @@ export default function ImportFab() {
       >
         <DialogTitle>Importuj plan treningowy</DialogTitle>
         <DialogContent>
-          <Button variant="contained" onClick={onChoose} sx={{ mb: 2 }}>
-            Wybierz plik JSON
-          </Button>
+          <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+            <Button variant="contained" onClick={onChoose}>
+              Importuj treningi z pliku JSON
+            </Button>
+            <Button variant="outlined" onClick={downloadTemplate}>
+              Pobierz szablon
+            </Button>
+            <Button variant="outlined" onClick={copyTemplate}>
+              Skopiuj szablon
+            </Button>
+          </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             lub wklej zawartość pliku JSON poniżej:
           </Typography>
           <TextField
             value={pasteValue}
             onChange={(e) => setPasteValue(e.target.value)}
-            placeholder='{"plan": { "workouts": [ ... ] }}'
+            placeholder='{"workouts": [ ... ] }'
             multiline
             rows={10}
             fullWidth

@@ -41,78 +41,66 @@ Dodatkowe szczegóły importu:
   - **Upload pliku**: wybierz plik `.json` z dysku (przycisk `Import` / FAB).
   - **Wklej JSON**: wklej zawartość pliku JSON w polu tekstowym w dialogu importu i kliknij `Importuj z tekstu`.
 - Pola wymagane dla każdego treningu to: `name`, `description`, `scheduledAt`, `sets` (zgodnie z formatem powyżej). ID dokumentów w Firestore są generowane automatycznie podczas importu — nie musisz podawać `id` w pliku.
-- Jeśli w Twoim JSON brakuje `plan.workouts` lub format jest nieprawidłowy, import zwróci błąd i nie zapisze danych.
+- Jeśli w Twoim JSON brakuje `workouts` lub `plan.workouts` (w starszym formacie) albo format jest nieprawidłowy, import zwróci błąd i nie zapisze danych.
 - Import waliduje strukturę pliku przed zapisem. W przypadku brakujących pól (np. brak `name`, `sets` bez `exercises` itp.) import zostanie przerwany, a w UI zobaczysz komunikat z listą błędów walidacji.
 - Nowo zaimportowane treningi są wyróżnione na liście etykietą `New` **tylko lokalnie w UI** (bez zapisu tego oznaczenia do Firestore).
 
-**Format JSON pliku treningowego:**
+**Format JSON pliku treningowego (nowy):**
 
 ```json
 {
-  "plan": {
-    "name": "Plan tygodniowy",
-    "createdAt": "2026-03-25T10:00:00Z",
-    "workouts": [
-      {
-        "name": "Full Body Beginner",
-        "description": "Prosty trening całego ciała",
-
-        "scheduledAt": "2026-03-26T18:00:00Z",
-
-        "sets": [
-          {
-            "setNumber": 1,
-            "type": "circuit",
-            "rounds": 3,
-
-            "restBetweenRoundsSeconds": 90,
-            "restAfterSetSeconds": 180,
-
-            "exercises": [
-              {
-                "name": "Pompki",
-                "description": "Klasyczne pompki",
-                "reps": 12,
-                "equipment": null
-              },
-              {
-                "name": "Podciąganie",
-                "description": "Nachwytem",
-                "reps": 6,
-                "equipment": "drążek"
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "name": "Lower Body",
-        "description": "Trening nóg",
-
-        "scheduledAt": "2026-03-28T17:00:00Z",
-
-        "sets": [
-          {
-            "setNumber": 1,
-            "type": "standard",
-            "rounds": 4,
-
-            "restBetweenRoundsSeconds": 120,
-            "restAfterSetSeconds": 180,
-
-            "exercises": [
-              {
-                "name": "Przysiady",
-                "description": "Z kettlebell",
-                "reps": 10,
-                "equipment": "kettlebell 20kg"
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  }
+  "workouts": [
+    {
+      "name": "Full Body Beginner",
+      "description": "Prosty trening całego ciała",
+      "scheduledAt": "2026-03-26T18:00:00Z",
+      "sets": [
+        {
+          "setNumber": 1,
+          "type": "circuit",
+          "rounds": 3,
+          "restBetweenRoundsSeconds": 90,
+          "restAfterSetSeconds": 180,
+          "exercises": [
+            {
+              "name": "Pompki",
+              "description": "Klasyczne pompki",
+              "reps": 12,
+              "equipment": null
+            },
+            {
+              "name": "Podciąganie",
+              "description": "Nachwytem",
+              "reps": 6,
+              "equipment": "drążek"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Lower Body",
+      "description": "Trening nóg",
+      "scheduledAt": "2026-03-28T17:00:00Z",
+      "sets": [
+        {
+          "setNumber": 1,
+          "type": "standard",
+          "rounds": 4,
+          "restBetweenRoundsSeconds": 120,
+          "restAfterSetSeconds": 180,
+          "exercises": [
+            {
+              "name": "Przysiady",
+              "description": "Z kettlebell",
+              "reps": 10,
+              "equipment": "kettlebell 20kg"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -153,6 +141,20 @@ Na każdym ekranie ćwiczenia widoczne są:
 - Pasek postępu treningu
 - Przycisk „Zakończ trening" (powrót do listy)
 - Box z podsumowaniem kolejnego ćwiczenia
+
+## UC-5: Podgląd treningu
+
+Po kliknięciu na trening na liście pojawia się jego podsumowanie, opis, lista bloków, serii i ćwiczeń w danej serii.
+Na dole przycisk "Rozpocznij" lub "Powrót".
+
+## UC-6: Anulowanie treningu
+
+Jeśli w trakcie treningu użytkownik naciśnie X w rogu strony, trening jest anulowany, następuje powrót do listy, trening nie zmienia statusu na "zakończony".
+
+## UC-7: Generowanie pliku przykładowego
+
+Na widoku z uploadem pliku znajduje się przycisk z ikoną pobierania, po jego naciśnięciu rozpoczyna się pobieranie pliku template.json zawierającego przykładowy szablon treningu (ten sam, który znajduje się już w textarea).
+Drugi przycisk z ikoną schowka/kopiowania kopiuje treść szablonu do schowka.
 
 ---
 

@@ -21,6 +21,8 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import Navbar from "../components/Navbar";
 import ImportFab from "../components/ImportFab";
 import useWorkouts from "../hooks/useWorkouts";
@@ -183,6 +185,10 @@ export default function WorkoutListPage() {
                               gap: 1,
                             }}
                           >
+                            <FitnessCenterIcon
+                              fontSize="small"
+                              color="action"
+                            />
                             <span>{w.name}</span>
                             {newWorkoutIdSet.has(w.id) ? (
                               <Chip
@@ -202,14 +208,28 @@ export default function WorkoutListPage() {
                             ) : null}
                           </Box>
                         }
-                        secondary={new Date(w.scheduledAt)
-                          .toLocaleDateString("pl-PL", {
-                            weekday: "long",
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                          })
-                          .replace(/^\w/, (c) => c.toUpperCase())}
+                        secondary={
+                          <Box
+                            component="span"
+                            sx={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 0.5,
+                            }}
+                          >
+                            <CalendarTodayIcon
+                              sx={{ fontSize: 13, verticalAlign: "middle" }}
+                            />
+                            {new Date(w.scheduledAt)
+                              .toLocaleDateString("pl-PL", {
+                                weekday: "long",
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              })
+                              .replace(/^\w/, (c) => c.toUpperCase())}
+                          </Box>
+                        }
                       />
                     </ListItemButton>
                   </ListItem>

@@ -11,6 +11,11 @@ import {
   Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import RepeatIcon from "@mui/icons-material/Repeat";
+import BuildIcon from "@mui/icons-material/Build";
+import TimerIcon from "@mui/icons-material/Timer";
+import SkipNextIcon from "@mui/icons-material/SkipNext";
+import BarChartIcon from "@mui/icons-material/BarChart";
 import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
@@ -18,7 +23,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { db } from "../firebase";
 import type { Workout } from "../types/workout";
 
-type RunnerPhase = "exercise" | "rest" | "completed";
+type RunnerPhase = "preview" | "exercise" | "rest" | "completed";
 
 type StepPosition = {
   setIndex: number;
@@ -54,7 +59,7 @@ function getTotalExerciseSteps(workout: Workout) {
 
 function getNextExercisePosition(
   workout: Workout,
-  current: StepPosition
+  current: StepPosition,
 ): StepPosition | null {
   const currentSet = workout.sets[current.setIndex];
   if (!currentSet) return null;
@@ -90,7 +95,7 @@ function getNextExercisePosition(
 function getRestBeforeNext(
   workout: Workout,
   current: StepPosition,
-  next: StepPosition | null
+  next: StepPosition | null,
 ) {
   if (!next) return null;
   const currentSet = workout.sets[current.setIndex];
@@ -132,7 +137,7 @@ export default function WorkoutRunnerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [phase, setPhase] = useState<RunnerPhase>("exercise");
+  const [phase, setPhase] = useState<RunnerPhase>("preview");
   const [currentPos, setCurrentPos] = useState<StepPosition>({
     setIndex: 0,
     round: 1,
@@ -192,7 +197,7 @@ export default function WorkoutRunnerPage() {
           setCurrentPos({ setIndex: 0, round: 1, exerciseIndex: 0 });
           setCompletedExercises(0);
           setRestState(null);
-          setPhase("exercise");
+          setPhase("preview");
           setCompletionPersisted(false);
           setCompletionPersistError(null);
           setLoading(false);
@@ -241,7 +246,7 @@ export default function WorkoutRunnerPage() {
 
   const totalExercises = useMemo(
     () => (workout ? getTotalExerciseSteps(workout) : 0),
-    [workout]
+    [workout],
   );
 
   const progress = useMemo(() => {
@@ -278,6 +283,12 @@ export default function WorkoutRunnerPage() {
     setCompletedExercises(totalExercises);
   };
 
+  const cancelWorkout = () => {
+    setRestState(null);
+    // nie ustawiamy completed, aby status w Firestore pozostał bez zmian
+    navigate("/");
+  };
+
   useEffect(() => {
     if (phase !== "completed" || !workout || !user || completionPersisted) {
       return;
@@ -299,7 +310,7 @@ export default function WorkoutRunnerPage() {
       } catch {
         if (!cancelled) {
           setCompletionPersistError(
-            "Nie udało się zapisać statusu ukończenia treningu."
+            "Nie udało się zapisać statusu ukończenia treningu.",
           );
         }
       }
@@ -408,6 +419,75 @@ export default function WorkoutRunnerPage() {
               Powrót do listy
             </Button>
           </Paper>
+        ) : phase === "preview" ? (
+          <Paper sx={{ p: 3 }} elevation={2}>
+            <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>
+              Podgląd treningu
+            </Typography>
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              {workout.name}
+            </Typography>
+            <Typography sx={{ mb: 1 }}>{workout.description}</Typography>
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              Zaplanowane:{" "}
+              {new Date(workout.scheduledAt).toLocaleString("pl-PL")}
+            </Typography>
+
+            {workout.sets.map((set, setIndex) => (
+              <Paper key={setIndex} variant="outlined" sx={{ p: 2, mb: 1 }}>
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={700}
+                  sx={{ mb: 0.5 }}
+                >
+                  Set {set.setNumber} • {set.type} • powórzenia: {set.rounds}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 0.5 }}
+                >
+                  Przerwa między rundami: {set.restBetweenRoundsSeconds}s, po
+                  secie: {set.restAfterSetSeconds}s
+                </Typography>
+                <Box sx={{ pl: 2 }}>
+                  {set.exercises.map((exercise, exerciseIndex) => (
+                    <Box key={exerciseIndex} sx={{ mb: 0.5 }}>
+                      <Typography sx={{ fontWeight: 600 }}>
+                        {exercise.name}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mb: 0.25 }}
+                      >
+                        {exercise.reps} powtórzeń
+                        {exercise.equipment
+                          ? ` • sprzęt: ${exercise.equipment}`
+                          : ""}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ opacity: 0.6 }}
+                      >
+                        {exercise.description}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Paper>
+            ))}
+
+            <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+              <Button variant="contained" onClick={() => setPhase("exercise")}>
+                Rozpocznij
+              </Button>
+              <Button variant="outlined" onClick={() => navigate("/")}>
+                Powrót
+              </Button>
+            </Stack>
+          </Paper>
         ) : (
           <Stack
             spacing={2.5}
@@ -430,8 +510,14 @@ export default function WorkoutRunnerPage() {
               <Typography
                 variant="body2"
                 color="text.secondary"
-                sx={{ mb: 0.75 }}
+                sx={{
+                  mb: 0.75,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                }}
               >
+                <BarChartIcon fontSize="inherit" />
                 Postęp: {completedExercises} / {totalExercises}
               </Typography>
               <LinearProgress variant="determinate" value={progress} />
@@ -450,9 +536,9 @@ export default function WorkoutRunnerPage() {
                   elevation={2}
                 >
                   <IconButton
-                    aria-label="Zakończ trening"
+                    aria-label="Anuluj trening"
                     color="error"
-                    onClick={finishWorkout}
+                    onClick={cancelWorkout}
                     size="small"
                     sx={{ position: "absolute", top: 8, right: 8 }}
                   >
@@ -469,33 +555,62 @@ export default function WorkoutRunnerPage() {
                     {currentExercise.description}
                   </Typography>
 
-                  <Stack direction="row" spacing={1.5} sx={{ mb: 2.5 }}>
-                    <Typography variant="body1">
-                      <strong>Powtórzenia:</strong> {currentExercise.reps}
-                    </Typography>
-                    {currentExercise.equipment ? (
+                  <Stack
+                    direction="row"
+                    spacing={2}
+                    sx={{ mb: 2.5, flexWrap: "wrap" }}
+                  >
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                    >
+                      <RepeatIcon fontSize="small" color="primary" />
                       <Typography variant="body1">
-                        <strong>Sprzęt:</strong> {currentExercise.equipment}
+                        <strong>Powtórzenia:</strong> {currentExercise.reps}
                       </Typography>
+                    </Box>
+                    {currentExercise.equipment ? (
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                      >
+                        <BuildIcon fontSize="small" color="action" />
+                        <Typography variant="body1">
+                          <strong>Sprzęt:</strong> {currentExercise.equipment}
+                        </Typography>
+                      </Box>
                     ) : null}
                   </Stack>
 
                   <Paper variant="outlined" sx={{ p: 1.5 }}>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mb: 0.5 }}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.5,
+                        mb: 0.5,
+                      }}
                     >
-                      Następne ćwiczenie
-                    </Typography>
+                      <SkipNextIcon fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        Następne ćwiczenie
+                      </Typography>
+                    </Box>
                     {nextPosition && nextExercise ? (
                       <>
                         <Typography fontWeight={700}>
                           {nextExercise.name}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Powtórzenia: {nextExercise.reps}
-                        </Typography>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                          }}
+                        >
+                          <RepeatIcon sx={{ fontSize: 13 }} color="action" />
+                          <Typography variant="body2" color="text.secondary">
+                            Powtórzenia: {nextExercise.reps}
+                          </Typography>
+                        </Box>
                         {nextExercise.equipment ? (
                           <Typography variant="body2" color="text.secondary">
                             Sprzęt: {nextExercise.equipment}
@@ -538,9 +653,9 @@ export default function WorkoutRunnerPage() {
             ) : phase === "rest" && restState ? (
               <Paper sx={{ p: 2.5, position: "relative" }} elevation={2}>
                 <IconButton
-                  aria-label="Zakończ trening"
+                  aria-label="Anuluj trening"
                   color="error"
-                  onClick={finishWorkout}
+                  onClick={cancelWorkout}
                   size="small"
                   sx={{ position: "absolute", top: 8, right: 8 }}
                 >
@@ -551,14 +666,29 @@ export default function WorkoutRunnerPage() {
                     ? "Przerwa między rundami"
                     : "Przerwa po secie"}
                 </Typography>
-                <Typography variant="h3" fontWeight={700} sx={{ my: 1 }}>
-                  {formatSeconds(restState.secondsLeft)}
-                </Typography>
-                <Typography color="text.secondary" sx={{ mb: 2 }}>
-                  Następne: {restNextExercise?.name ?? "kolejne ćwiczenie"} (set{" "}
-                  {restState.target.setIndex + 1}, seria{" "}
-                  {restState.target.round})
-                </Typography>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 1, my: 1 }}
+                >
+                  <TimerIcon color="primary" sx={{ fontSize: 40 }} />
+                  <Typography variant="h3" fontWeight={700}>
+                    {formatSeconds(restState.secondsLeft)}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    mb: 2,
+                  }}
+                >
+                  <SkipNextIcon fontSize="small" color="action" />
+                  <Typography color="text.secondary">
+                    Następne: {restNextExercise?.name ?? "kolejne ćwiczenie"}{" "}
+                    (set {restState.target.setIndex + 1}, seria{" "}
+                    {restState.target.round})
+                  </Typography>
+                </Box>
                 <Stack direction="row" spacing={1.5}>
                   <Button variant="contained" onClick={skipRest}>
                     Pomiń przerwę

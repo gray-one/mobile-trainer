@@ -27,7 +27,8 @@ export interface Workout {
 
 // Shape of the imported JSON file
 export interface WorkoutPlan {
-  plan: {
+  workouts?: Omit<Workout, "createdAt">[];
+  plan?: {
     name: string;
     createdAt: string;
     workouts: Omit<Workout, "createdAt">[];
