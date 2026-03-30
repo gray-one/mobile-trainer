@@ -103,7 +103,7 @@ export default function ImportFab() {
 
   const onChoose = () => inputRef.current?.click();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [pasteValue, setPasteValue] = useState(TEMPLATE_JSON);
+  const [pasteValue, setPasteValue] = useState("");
 
   const downloadTemplate = () => {
     const blob = new Blob([TEMPLATE_JSON], { type: "application/json" });
