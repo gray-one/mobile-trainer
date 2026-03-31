@@ -94,7 +94,8 @@ Dodatkowe szczegóły importu:
               "name": "Przysiady",
               "description": "Z kettlebell",
               "reps": 10,
-              "equipment": "kettlebell 20kg"
+              "equipment": "kettlebell 20kg",
+              "duration": 90
             }
           ]
         }
@@ -181,7 +182,9 @@ Drugi przycisk z ikoną schowka/kopiowania kopiuje treść szablonu do schowka.
           {
             name: string
             description: string
-            reps: number
+            reps: number?          // liczba powtórzeń, opcjonalnie
+            duration: number?      // czas trwania ćwiczenia w sekundach (lub durationSeconds)
+            durationSeconds: number? // alias dla duration
             equipment: string | null
           }
         ]

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   Alert,
   Box,
@@ -144,6 +144,9 @@ export default function WorkoutRunnerPage() {
     exerciseIndex: 0,
   });
   const [restState, setRestState] = useState<RestState | null>(null);
+  const [exerciseSecondsLeft, setExerciseSecondsLeft] = useState<number | null>(
+    null,
+  );
   const [completedExercises, setCompletedExercises] = useState(0);
   const [completionPersisted, setCompletionPersisted] = useState(false);
   const [completionPersistError, setCompletionPersistError] = useState<
@@ -237,24 +240,6 @@ export default function WorkoutRunnerPage() {
     return () => clearInterval(interval);
   }, [phase, restState]);
 
-  useEffect(() => {
-    if (phase !== "rest" || !restState || restState.secondsLeft > 0) return;
-    setCurrentPos(restState.target);
-    setRestState(null);
-    setPhase("exercise");
-  }, [phase, restState]);
-
-  const totalExercises = useMemo(
-    () => (workout ? getTotalExerciseSteps(workout) : 0),
-    [workout],
-  );
-
-  const progress = useMemo(() => {
-    if (!totalExercises) return 0;
-    if (phase === "completed") return 100;
-    return Math.round((completedExercises / totalExercises) * 100);
-  }, [completedExercises, totalExercises, phase]);
-
   const currentSet = workout?.sets[currentPos.setIndex];
   const currentExercise = currentSet?.exercises[currentPos.exerciseIndex];
   const roundsCount = workout
@@ -271,17 +256,57 @@ export default function WorkoutRunnerPage() {
       ? getRestBeforeNext(workout, currentPos, nextPosition)
       : null;
 
+  useEffect(() => {
+    if (phase !== "exercise" || !currentExercise) {
+      setExerciseSecondsLeft(null);
+      return;
+    }
+
+    const duration =
+      currentExercise.duration ?? currentExercise.durationSeconds ?? null;
+
+    if (duration != null && Number.isFinite(duration) && duration > 0) {
+      setExerciseSecondsLeft(duration);
+    } else {
+      setExerciseSecondsLeft(null);
+    }
+  }, [
+    phase,
+    currentPos.setIndex,
+    currentPos.round,
+    currentPos.exerciseIndex,
+    currentExercise,
+  ]);
+
+  useEffect(() => {
+    if (phase !== "rest" || !restState || restState.secondsLeft > 0) return;
+    setCurrentPos(restState.target);
+    setRestState(null);
+    setPhase("exercise");
+  }, [phase, restState]);
+
   const restNextExercise =
     restState &&
     workout?.sets[restState.target.setIndex]?.exercises[
       restState.target.exerciseIndex
     ];
 
-  const finishWorkout = () => {
+  const totalExercises = useMemo(
+    () => (workout ? getTotalExerciseSteps(workout) : 0),
+    [workout],
+  );
+
+  const progress = useMemo(() => {
+    if (!totalExercises) return 0;
+    if (phase === "completed") return 100;
+    return Math.round((completedExercises / totalExercises) * 100);
+  }, [completedExercises, totalExercises, phase]);
+
+  const finishWorkout = useCallback(() => {
     setPhase("completed");
     setRestState(null);
     setCompletedExercises(totalExercises);
-  };
+  }, [totalExercises]);
 
   const cancelWorkout = () => {
     setRestState(null);
@@ -323,7 +348,7 @@ export default function WorkoutRunnerPage() {
     };
   }, [phase, workout, user, completionPersisted]);
 
-  const handleDone = () => {
+  const handleDone = useCallback(() => {
     if (!workout || !currentSet || !currentExercise) return;
 
     const next = getNextExercisePosition(workout, currentPos);
@@ -373,7 +398,14 @@ export default function WorkoutRunnerPage() {
 
     setCurrentPos(next);
     setPhase("exercise");
-  };
+  }, [
+    workout,
+    currentSet,
+    currentExercise,
+    currentPos,
+    totalExercises,
+    finishWorkout,
+  ]);
 
   const skipRest = () => {
     if (!restState) return;
@@ -381,6 +413,24 @@ export default function WorkoutRunnerPage() {
     setRestState(null);
     setPhase("exercise");
   };
+
+  useEffect(() => {
+    if (phase !== "exercise" || exerciseSecondsLeft == null) return;
+
+    if (exerciseSecondsLeft <= 0) {
+      handleDone();
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setExerciseSecondsLeft((prev) => {
+        if (prev == null || prev <= 0) return prev;
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [phase, exerciseSecondsLeft, handleDone]);
 
   return (
     <Box>
@@ -461,7 +511,16 @@ export default function WorkoutRunnerPage() {
                         color="text.secondary"
                         sx={{ mb: 0.25 }}
                       >
-                        {exercise.reps} powtórzeń
+                        {(exercise.duration ?? exercise.durationSeconds) ? (
+                          <>
+                            Czas:{" "}
+                            {exercise.duration ?? exercise.durationSeconds}s
+                          </>
+                        ) : exercise.reps != null ? (
+                          <>Powtórzenia: {exercise.reps}</>
+                        ) : (
+                          <>Brak powtórzeń ani czasu</>
+                        )}
                         {exercise.equipment
                           ? ` • sprzęt: ${exercise.equipment}`
                           : ""}
@@ -555,6 +614,22 @@ export default function WorkoutRunnerPage() {
                     {currentExercise.description}
                   </Typography>
 
+                  {exerciseSecondsLeft != null && exerciseSecondsLeft >= 0 ? (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        mb: 2,
+                      }}
+                    >
+                      <TimerIcon color="primary" sx={{ fontSize: 28 }} />
+                      <Typography variant="h4" fontWeight={700}>
+                        {formatSeconds(exerciseSecondsLeft)}
+                      </Typography>
+                    </Box>
+                  ) : null}
+
                   <Stack
                     direction="row"
                     spacing={2}
@@ -565,7 +640,21 @@ export default function WorkoutRunnerPage() {
                     >
                       <RepeatIcon fontSize="small" color="primary" />
                       <Typography variant="body1">
-                        <strong>Powtórzenia:</strong> {currentExercise.reps}
+                        {(currentExercise.duration ??
+                        currentExercise.durationSeconds) ? (
+                          <>
+                            <strong>Czas:</strong>{" "}
+                            {currentExercise.duration ??
+                              currentExercise.durationSeconds}
+                            s
+                          </>
+                        ) : currentExercise.reps != null ? (
+                          <>
+                            <strong>Powtórzenia:</strong> {currentExercise.reps}
+                          </>
+                        ) : (
+                          <>Brak danych (powtórzenia/czas)</>
+                        )}
                       </Typography>
                     </Box>
                     {currentExercise.equipment ? (
@@ -608,7 +697,19 @@ export default function WorkoutRunnerPage() {
                         >
                           <RepeatIcon sx={{ fontSize: 13 }} color="action" />
                           <Typography variant="body2" color="text.secondary">
-                            Powtórzenia: {nextExercise.reps}
+                            {(nextExercise.duration ??
+                            nextExercise.durationSeconds) ? (
+                              <>
+                                Czas:{" "}
+                                {nextExercise.duration ??
+                                  nextExercise.durationSeconds}
+                                s
+                              </>
+                            ) : nextExercise.reps != null ? (
+                              <>Powtórzenia: {nextExercise.reps}</>
+                            ) : (
+                              <>Brak danych powt./czas</>
+                            )}
                           </Typography>
                         </Box>
                         {nextExercise.equipment ? (

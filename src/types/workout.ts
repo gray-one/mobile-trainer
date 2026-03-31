@@ -1,8 +1,10 @@
 export interface Exercise {
   name: string;
   description: string;
-  reps: number;
-  equipment: string | null;
+  reps?: number | null;
+  duration?: number | null;
+  durationSeconds?: number | null;
+  equipment?: string | null;
 }
 
 export interface WorkoutSet {

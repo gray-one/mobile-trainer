@@ -40,13 +40,14 @@ const TEMPLATE_JSON = `{
               {
                 "name": "Pompki",
                 "description": "Klasyczne pompki",
-                "reps": 12,
+                "duration": 20,
                 "equipment": null
               },
               {
                 "name": "Podciąganie",
                 "description": "Nachwytem",
                 "reps": 6,
+                "duration": null,
                 "equipment": "drążek"
               }
             ]
@@ -72,8 +73,9 @@ const TEMPLATE_JSON = `{
               {
                 "name": "Przysiady",
                 "description": "Z kettlebell",
-                "reps": 10,
-                "equipment": "kettlebell 20kg"
+                "reps": null,
+                "equipment": "kettlebell 20kg",
+                "duration": 90
               }
             ]
           }
@@ -206,7 +208,17 @@ export default function ImportFab() {
             s.exercises.forEach((ex, ei) => {
               const ep = `${sp}.exercises[${ei}]`;
               if (!ex.name) errs.push(`${ep}: brak pola 'name'`);
-              if (ex.reps == null) errs.push(`${ep}: brak pola 'reps'`);
+
+              const duration = ex.duration ?? ex.durationSeconds;
+              const hasReps = ex.reps != null && Number.isFinite(ex.reps);
+              const hasDuration = duration != null && Number.isFinite(duration);
+
+              if (!hasReps && !hasDuration) {
+                errs.push(
+                  `${ep}: brak pola 'reps' lub 'duration' (potrzebne do ćwiczeń)`,
+                );
+              }
+
               if (!ex.description) errs.push(`${ep}: brak pola 'description'`);
             });
           }
