@@ -13,12 +13,13 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import RepeatIcon from "@mui/icons-material/Repeat";
 import BuildIcon from "@mui/icons-material/Build";
-import TimerIcon from "@mui/icons-material/Timer";
+import TimerDisplay from "../components/TimerDisplay";
 import SkipNextIcon from "@mui/icons-material/SkipNext";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import { playBeep } from "../utils/audio";
 import { useAuth } from "../contexts/AuthContext";
 import { db } from "../firebase";
 import type { Workout } from "../types/workout";
@@ -31,20 +32,20 @@ type StepPosition = {
   exerciseIndex: number;
 };
 
+type RestReason = "between-rounds" | "after-set";
+
 type RestState = {
   secondsLeft: number;
   totalSeconds: number;
   target: StepPosition;
-  reason: "between-rounds" | "after-set";
+  reason: RestReason;
 };
 
-function formatSeconds(value: number) {
-  const mins = Math.floor(value / 60)
-    .toString()
-    .padStart(2, "0");
-  const secs = (value % 60).toString().padStart(2, "0");
-  return `${mins}:${secs}`;
-}
+type RestInfo = {
+  seconds: number;
+  reason: RestReason;
+  label: string;
+};
 
 function getRoundsCount(workout: Workout, setIndex: number) {
   return Math.max(1, workout.sets[setIndex]?.rounds ?? 1);
@@ -96,7 +97,7 @@ function getRestBeforeNext(
   workout: Workout,
   current: StepPosition,
   next: StepPosition | null,
-) {
+): RestInfo | null {
   if (!next) return null;
   const currentSet = workout.sets[current.setIndex];
   if (!currentSet) return null;
@@ -114,14 +115,16 @@ function getRestBeforeNext(
   ) {
     return {
       seconds: currentSet.restBetweenRoundsSeconds,
-      reason: "Przerwa między rundami",
+      reason: "between-rounds",
+      label: "Przerwa między rundami",
     };
   }
 
   if (lastExerciseInRound && isNextSet && currentSet.restAfterSetSeconds > 0) {
     return {
       seconds: currentSet.restAfterSetSeconds,
-      reason: "Przerwa po secie",
+      reason: "after-set",
+      label: "Przerwa po secie",
     };
   }
 
@@ -144,9 +147,6 @@ export default function WorkoutRunnerPage() {
     exerciseIndex: 0,
   });
   const [restState, setRestState] = useState<RestState | null>(null);
-  const [exerciseSecondsLeft, setExerciseSecondsLeft] = useState<number | null>(
-    null,
-  );
   const [completedExercises, setCompletedExercises] = useState(0);
   const [completionPersisted, setCompletionPersisted] = useState(false);
   const [completionPersistError, setCompletionPersistError] = useState<
@@ -224,22 +224,6 @@ export default function WorkoutRunnerPage() {
     };
   }, [user, id]);
 
-  useEffect(() => {
-    if (phase !== "rest" || !restState) return;
-
-    const interval = setInterval(() => {
-      setRestState((prev) => {
-        if (!prev) return prev;
-        if (prev.secondsLeft <= 1) {
-          return { ...prev, secondsLeft: 0 };
-        }
-        return { ...prev, secondsLeft: prev.secondsLeft - 1 };
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [phase, restState]);
-
   const currentSet = workout?.sets[currentPos.setIndex];
   const currentExercise = currentSet?.exercises[currentPos.exerciseIndex];
   const roundsCount = workout
@@ -256,30 +240,12 @@ export default function WorkoutRunnerPage() {
       ? getRestBeforeNext(workout, currentPos, nextPosition)
       : null;
 
-  useEffect(() => {
-    if (phase !== "exercise" || !currentExercise) {
-      setExerciseSecondsLeft(null);
-      return;
-    }
-
-    const duration =
-      currentExercise.duration ?? currentExercise.durationSeconds ?? null;
-
-    if (duration != null && Number.isFinite(duration) && duration > 0) {
-      setExerciseSecondsLeft(duration);
-    } else {
-      setExerciseSecondsLeft(null);
-    }
-  }, [
-    phase,
-    currentPos.setIndex,
-    currentPos.round,
-    currentPos.exerciseIndex,
-    currentExercise,
-  ]);
+  const currentExerciseDuration =
+    currentExercise?.duration ?? currentExercise?.durationSeconds ?? null;
 
   useEffect(() => {
     if (phase !== "rest" || !restState || restState.secondsLeft > 0) return;
+    playBeep(660, 0.2);
     setCurrentPos(restState.target);
     setRestState(null);
     setPhase("exercise");
@@ -359,38 +325,14 @@ export default function WorkoutRunnerPage() {
       return;
     }
 
-    const lastExerciseInRound =
-      currentPos.exerciseIndex === currentSet.exercises.length - 1;
-    const isNextRound =
-      next.setIndex === currentPos.setIndex &&
-      next.round === currentPos.round + 1;
-    const isNextSet = next.setIndex === currentPos.setIndex + 1;
+    const restInfo = getRestBeforeNext(workout, currentPos, next);
 
-    if (
-      lastExerciseInRound &&
-      isNextRound &&
-      currentSet.restBetweenRoundsSeconds > 0
-    ) {
+    if (restInfo) {
       setRestState({
-        secondsLeft: currentSet.restBetweenRoundsSeconds,
-        totalSeconds: currentSet.restBetweenRoundsSeconds,
+        secondsLeft: restInfo.seconds,
+        totalSeconds: restInfo.seconds,
         target: next,
-        reason: "between-rounds",
-      });
-      setPhase("rest");
-      return;
-    }
-
-    if (
-      lastExerciseInRound &&
-      isNextSet &&
-      currentSet.restAfterSetSeconds > 0
-    ) {
-      setRestState({
-        secondsLeft: currentSet.restAfterSetSeconds,
-        totalSeconds: currentSet.restAfterSetSeconds,
-        target: next,
-        reason: "after-set",
+        reason: restInfo.reason,
       });
       setPhase("rest");
       return;
@@ -413,24 +355,6 @@ export default function WorkoutRunnerPage() {
     setRestState(null);
     setPhase("exercise");
   };
-
-  useEffect(() => {
-    if (phase !== "exercise" || exerciseSecondsLeft == null) return;
-
-    if (exerciseSecondsLeft <= 0) {
-      handleDone();
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setExerciseSecondsLeft((prev) => {
-        if (prev == null || prev <= 0) return prev;
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [phase, exerciseSecondsLeft, handleDone]);
 
   return (
     <Box>
@@ -614,20 +538,15 @@ export default function WorkoutRunnerPage() {
                     {currentExercise.description}
                   </Typography>
 
-                  {exerciseSecondsLeft != null && exerciseSecondsLeft >= 0 ? (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        mb: 2,
+                  {currentExerciseDuration != null ? (
+                    <TimerDisplay
+                      key={`${currentPos.setIndex}-${currentPos.round}-${currentPos.exerciseIndex}`}
+                      seconds={currentExerciseDuration}
+                      onFinish={() => {
+                        playBeep(880, 0.2);
+                        handleDone();
                       }}
-                    >
-                      <TimerIcon color="primary" sx={{ fontSize: 28 }} />
-                      <Typography variant="h4" fontWeight={700}>
-                        {formatSeconds(exerciseSecondsLeft)}
-                      </Typography>
-                    </Box>
+                    />
                   ) : null}
 
                   <Stack
@@ -719,7 +638,7 @@ export default function WorkoutRunnerPage() {
                         ) : null}
                         {restBeforeNext ? (
                           <Typography variant="body2" color="text.secondary">
-                            Przed następnym krokiem: {restBeforeNext.reason} (
+                            Przed następnym krokiem: {restBeforeNext.label} (
                             {restBeforeNext.seconds}s)
                           </Typography>
                         ) : null}
@@ -767,14 +686,17 @@ export default function WorkoutRunnerPage() {
                     ? "Przerwa między rundami"
                     : "Przerwa po secie"}
                 </Typography>
-                <Box
-                  sx={{ display: "flex", alignItems: "center", gap: 1, my: 1 }}
-                >
-                  <TimerIcon color="primary" sx={{ fontSize: 40 }} />
-                  <Typography variant="h3" fontWeight={700}>
-                    {formatSeconds(restState.secondsLeft)}
-                  </Typography>
-                </Box>
+                <TimerDisplay
+                  key={`rest-${restState.target.setIndex}-${restState.target.round}-${restState.target.exerciseIndex}`}
+                  seconds={restState.secondsLeft}
+                  size={40}
+                  onFinish={() => {
+                    playBeep(660, 0.2);
+                    setCurrentPos(restState.target);
+                    setRestState(null);
+                    setPhase("exercise");
+                  }}
+                />
                 <Box
                   sx={{
                     display: "flex",
