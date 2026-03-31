@@ -11,7 +11,7 @@ export function playBeep(frequency = 880, duration = 0.15) {
     oscillator.type = "sine";
     oscillator.frequency.value = frequency;
 
-    gainNode.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    gainNode.gain.setValueAtTime(0.35, audioCtx.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(
       0.001,
       audioCtx.currentTime + duration,

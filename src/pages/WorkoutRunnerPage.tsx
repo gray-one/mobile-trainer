@@ -243,14 +243,6 @@ export default function WorkoutRunnerPage() {
   const currentExerciseDuration =
     currentExercise?.duration ?? currentExercise?.durationSeconds ?? null;
 
-  useEffect(() => {
-    if (phase !== "rest" || !restState || restState.secondsLeft > 0) return;
-    playBeep(660, 0.2);
-    setCurrentPos(restState.target);
-    setRestState(null);
-    setPhase("exercise");
-  }, [phase, restState]);
-
   const restNextExercise =
     restState &&
     workout?.sets[restState.target.setIndex]?.exercises[
@@ -428,6 +420,14 @@ export default function WorkoutRunnerPage() {
                   {set.exercises.map((exercise, exerciseIndex) => (
                     <Box key={exerciseIndex} sx={{ mb: 0.5 }}>
                       <Typography sx={{ fontWeight: 600 }}>
+                        {(exercise.duration ?? exercise.durationSeconds) ? (
+                          <>{exercise.duration ?? exercise.durationSeconds}s</>
+                        ) : exercise.reps != null ? (
+                          <>{exercise.reps}x</>
+                        ) : (
+                          <></>
+                        )}
+                        &nbsp;
                         {exercise.name}
                       </Typography>
                       <Typography
@@ -435,18 +435,8 @@ export default function WorkoutRunnerPage() {
                         color="text.secondary"
                         sx={{ mb: 0.25 }}
                       >
-                        {(exercise.duration ?? exercise.durationSeconds) ? (
-                          <>
-                            Czas:{" "}
-                            {exercise.duration ?? exercise.durationSeconds}s
-                          </>
-                        ) : exercise.reps != null ? (
-                          <>Powtórzenia: {exercise.reps}</>
-                        ) : (
-                          <>Brak powtórzeń ani czasu</>
-                        )}
                         {exercise.equipment
-                          ? ` • sprzęt: ${exercise.equipment}`
+                          ? `sprzęt: ${exercise.equipment}`
                           : ""}
                       </Typography>
                       <Typography
@@ -532,6 +522,20 @@ export default function WorkoutRunnerPage() {
                     {currentPos.round}/{roundsCount}
                   </Typography>
                   <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>
+                    {(currentExercise.duration ??
+                    currentExercise.durationSeconds) ? (
+                      <>
+                        <strong>Czas:</strong>{" "}
+                        {currentExercise.duration ??
+                          currentExercise.durationSeconds}
+                        s
+                      </>
+                    ) : currentExercise.reps != null ? (
+                      <>{currentExercise.reps}x</>
+                    ) : (
+                      <></>
+                    )}
+                    &nbsp;
                     {currentExercise.name}
                   </Typography>
                   <Typography color="text.secondary" sx={{ mb: 2 }}>
@@ -542,6 +546,11 @@ export default function WorkoutRunnerPage() {
                     <TimerDisplay
                       key={`${currentPos.setIndex}-${currentPos.round}-${currentPos.exerciseIndex}`}
                       seconds={currentExerciseDuration}
+                      autoStart={false}
+                      onStart={() => {
+                        // optional: dźwięk startu
+                        // playBeep(660, 0.08);
+                      }}
                       onFinish={() => {
                         playBeep(880, 0.2);
                         handleDone();
@@ -556,26 +565,7 @@ export default function WorkoutRunnerPage() {
                   >
                     <Box
                       sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-                    >
-                      <RepeatIcon fontSize="small" color="primary" />
-                      <Typography variant="body1">
-                        {(currentExercise.duration ??
-                        currentExercise.durationSeconds) ? (
-                          <>
-                            <strong>Czas:</strong>{" "}
-                            {currentExercise.duration ??
-                              currentExercise.durationSeconds}
-                            s
-                          </>
-                        ) : currentExercise.reps != null ? (
-                          <>
-                            <strong>Powtórzenia:</strong> {currentExercise.reps}
-                          </>
-                        ) : (
-                          <>Brak danych (powtórzenia/czas)</>
-                        )}
-                      </Typography>
-                    </Box>
+                    ></Box>
                     {currentExercise.equipment ? (
                       <Box
                         sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
@@ -605,32 +595,22 @@ export default function WorkoutRunnerPage() {
                     {nextPosition && nextExercise ? (
                       <>
                         <Typography fontWeight={700}>
+                          <RepeatIcon sx={{ fontSize: 13 }} color="action" />
+                          {(nextExercise.duration ??
+                          nextExercise.durationSeconds) ? (
+                            <>
+                              {nextExercise.duration ??
+                                nextExercise.durationSeconds}
+                              s
+                            </>
+                          ) : nextExercise.reps != null ? (
+                            <>{nextExercise.reps}X</>
+                          ) : (
+                            <></>
+                          )}{" "}
+                          &nbsp;
                           {nextExercise.name}
                         </Typography>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 0.5,
-                          }}
-                        >
-                          <RepeatIcon sx={{ fontSize: 13 }} color="action" />
-                          <Typography variant="body2" color="text.secondary">
-                            {(nextExercise.duration ??
-                            nextExercise.durationSeconds) ? (
-                              <>
-                                Czas:{" "}
-                                {nextExercise.duration ??
-                                  nextExercise.durationSeconds}
-                                s
-                              </>
-                            ) : nextExercise.reps != null ? (
-                              <>Powtórzenia: {nextExercise.reps}</>
-                            ) : (
-                              <>Brak danych powt./czas</>
-                            )}
-                          </Typography>
-                        </Box>
                         {nextExercise.equipment ? (
                           <Typography variant="body2" color="text.secondary">
                             Sprzęt: {nextExercise.equipment}
