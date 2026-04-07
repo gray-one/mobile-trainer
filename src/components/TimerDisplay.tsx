@@ -19,19 +19,6 @@ function formatSeconds(value: number) {
   return `${mins}:${secs}`;
 }
 
-// Type for Wake Lock API
-interface WakeLockSentinel {
-  release(): Promise<void>;
-}
-
-declare global {
-  interface Navigator {
-    wakeLock?: {
-      request(type: "screen"): Promise<WakeLockSentinel>;
-    };
-  }
-}
-
 export default function TimerDisplay({
   seconds,
   autoStart = true,
