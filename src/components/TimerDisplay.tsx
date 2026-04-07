@@ -19,6 +19,19 @@ function formatSeconds(value: number) {
   return `${mins}:${secs}`;
 }
 
+// Type for Wake Lock API
+interface WakeLockSentinel {
+  release(): Promise<void>;
+}
+
+declare global {
+  interface Navigator {
+    wakeLock?: {
+      request(type: "screen"): Promise<WakeLockSentinel>;
+    };
+  }
+}
+
 export default function TimerDisplay({
   seconds,
   autoStart = true,
@@ -30,6 +43,7 @@ export default function TimerDisplay({
   const [remaining, setRemaining] = useState(seconds);
   const [running, setRunning] = useState(autoStart);
   const finishedRef = useRef(false);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   useEffect(() => {
     setRemaining(seconds);
@@ -37,6 +51,40 @@ export default function TimerDisplay({
     setRunning(autoStart);
   }, [seconds, autoStart]);
 
+  // Acquire wake lock when timer starts
+  useEffect(() => {
+    if (!running) return;
+
+    let cancelled = false;
+
+    const acquireWakeLock = async () => {
+      try {
+        if (navigator.wakeLock) {
+          const sentinel = await navigator.wakeLock.request("screen");
+          if (!cancelled) {
+            wakeLockRef.current = sentinel;
+          }
+        }
+      } catch (err) {
+        console.warn("Wake Lock API not available or failed:", err);
+      }
+    };
+
+    void acquireWakeLock();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [running]);
+
+  // Call onStart when timer starts (for both autoStart and manual start)
+  useEffect(() => {
+    if (running && onStart) {
+      onStart();
+    }
+  }, [running, onStart]);
+
+  // Timer interval
   useEffect(() => {
     if (!running) return;
 
@@ -63,6 +111,44 @@ export default function TimerDisplay({
       onFinish?.();
     }
   }, [running, remaining, onFinish]);
+
+  // Release wake lock when timer finishes or component unmounts
+  useEffect(() => {
+    return () => {
+      if (wakeLockRef.current) {
+        void wakeLockRef.current.release().catch(() => {
+          // Ignore errors on release
+        });
+        wakeLockRef.current = null;
+      }
+    };
+  }, []);
+
+  // Re-acquire wake lock if page becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (!running) return;
+
+      if (document.hidden) {
+        // Page is hidden, we can try to keep the lock
+        // (system may release it)
+      } else {
+        // Page is visible again, re-acquire wake lock if lost
+        if (!wakeLockRef.current && navigator.wakeLock) {
+          try {
+            wakeLockRef.current = await navigator.wakeLock.request("screen");
+          } catch (err) {
+            console.warn("Failed to re-acquire wake lock:", err);
+          }
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [running]);
 
   const onStartClick = () => {
     if (!running) {

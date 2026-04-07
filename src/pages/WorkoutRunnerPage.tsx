@@ -19,7 +19,7 @@ import BarChartIcon from "@mui/icons-material/BarChart";
 import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import { playBeep } from "../utils/audio";
+import { playBeep, speakExercise } from "../utils/audio";
 import { useAuth } from "../contexts/AuthContext";
 import { db } from "../firebase";
 import type { Workout } from "../types/workout";
@@ -116,7 +116,7 @@ function getRestBeforeNext(
     return {
       seconds: currentSet.restBetweenRoundsSeconds,
       reason: "between-rounds",
-      label: "Przerwa między rundami",
+      label: "Przerwa między seriami",
     };
   }
 
@@ -306,6 +306,23 @@ export default function WorkoutRunnerPage() {
     };
   }, [phase, workout, user, completionPersisted]);
 
+  // Speak exercise name when starting exercise
+  useEffect(() => {
+    if (phase === "exercise" && currentExercise) {
+      let message = currentExercise.name;
+
+      const duration =
+        currentExercise.duration ?? currentExercise.durationSeconds;
+      if (duration != null) {
+        message += `, ${duration} sekund`;
+      } else if (currentExercise.reps != null) {
+        message += `, ${currentExercise.reps} razy`;
+      }
+
+      speakExercise(message);
+    }
+  }, [phase, currentExercise]);
+
   const handleDone = useCallback(() => {
     if (!workout || !currentSet || !currentExercise) return;
 
@@ -413,7 +430,7 @@ export default function WorkoutRunnerPage() {
                   color="text.secondary"
                   sx={{ mb: 0.5 }}
                 >
-                  Przerwa między rundami: {set.restBetweenRoundsSeconds}s, po
+                  Przerwa między seriami: {set.restBetweenRoundsSeconds}s, po
                   secie: {set.restAfterSetSeconds}s
                 </Typography>
                 <Box sx={{ pl: 2 }}>
@@ -548,11 +565,10 @@ export default function WorkoutRunnerPage() {
                       seconds={currentExerciseDuration}
                       autoStart={false}
                       onStart={() => {
-                        // optional: dźwięk startu
-                        // playBeep(660, 0.08);
+                        playBeep(660, 0.08, 1);
                       }}
                       onFinish={() => {
-                        playBeep(880, 0.2);
+                        playBeep(880, 0.3, 3);
                         handleDone();
                       }}
                     />
@@ -663,15 +679,18 @@ export default function WorkoutRunnerPage() {
                 </IconButton>
                 <Typography variant="overline" color="text.secondary">
                   {restState.reason === "between-rounds"
-                    ? "Przerwa między rundami"
+                    ? "Przerwa między seriami"
                     : "Przerwa po secie"}
                 </Typography>
                 <TimerDisplay
                   key={`rest-${restState.target.setIndex}-${restState.target.round}-${restState.target.exerciseIndex}`}
                   seconds={restState.secondsLeft}
                   size={40}
+                  onStart={() => {
+                    speakExercise(`Przerwa ${restState.totalSeconds} sekund`);
+                  }}
                   onFinish={() => {
-                    playBeep(660, 0.2);
+                    playBeep(660, 0.2, 3);
                     setCurrentPos(restState.target);
                     setRestState(null);
                     setPhase("exercise");
