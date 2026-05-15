@@ -18,7 +18,7 @@ type ThemeModeContextValue = {
 const STORAGE_KEY = "mobile-trainer:theme-mode";
 
 const ThemeModeContext = createContext<ThemeModeContextValue | undefined>(
-  undefined
+  undefined,
 );
 
 function readInitialMode(): ThemeMode {
@@ -49,22 +49,23 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
         palette: {
           mode,
           primary: {
-            main: "#6C63FF",
+            main: "#8B5E34",
           },
           secondary: {
-            main: "#FF6584",
+            main: "#C69C6D",
           },
+          divider: mode === "dark" ? "#5d4028" : "#c8a07b",
           ...(mode === "dark"
             ? {
                 background: {
-                  default: "#0F0F0F",
-                  paper: "#1A1A2E",
+                  default: "#221a13",
+                  paper: "#2f231c",
                 },
               }
             : {
                 background: {
-                  default: "#F5F6FA",
-                  paper: "#FFFFFF",
+                  default: "#f6ede2",
+                  paper: "#fff6ee8c",
                 },
               }),
         },
@@ -85,7 +86,7 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
           },
         },
       }),
-    [mode]
+    [mode],
   );
 
   return (

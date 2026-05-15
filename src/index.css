@@ -1,15 +1,15 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
+  --text: #4b3722;
+  --text-h: #2c1d10;
+  --bg: rgba(250, 241, 227, 0.92);
+  --border: #c7a488;
+  --code-bg: #f2e6d2;
+  --accent: #8b5939;
+  --accent-bg: rgba(139, 89, 57, 0.14);
+  --accent-border: rgba(139, 89, 57, 0.35);
+  --social-bg: rgba(228, 193, 150, 0.45);
   --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+    rgba(0, 0, 0, 0.15) 0 10px 15px -3px, rgba(0, 0, 0, 0.08) 0 4px 6px -2px;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -30,19 +30,36 @@
   }
 }
 
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background-image:
+    /* linear-gradient(rgba(42, 26, 13, 0.55), rgba(17, 10, 5, 0.82)), */
+    url('/bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: var(--text);
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
+    --text: #d2b99a;
+    --text-h: #f3eedf;
+    --bg: #1f1811;
+    --border: #4e3825;
+    --code-bg: #392b20;
+    --accent: #b88c5e;
+    --accent-bg: rgba(184, 140, 94, 0.18);
+    --accent-border: rgba(184, 140, 94, 0.45);
+    --social-bg: rgba(72, 54, 39, 0.55);
     --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+      rgba(0, 0, 0, 0.45) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
   }
 
   #social .button-icon {
@@ -55,15 +72,12 @@
   max-width: 100%;
   margin: 0 auto;
   text-align: center;
-  border-inline: 1px solid var(--border);
+  border-inline: 1px solid rgba(199, 164, 136, 0.55);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-}
-
-body {
-  margin: 0;
+  background: rgba(250, 243, 234, 0.52);
 }
 
 h1,
