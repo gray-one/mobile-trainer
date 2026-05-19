@@ -36,9 +36,6 @@ export default function LoginPage() {
           textAlign: "center",
         }}
       >
-        <Typography variant="h3" sx={{ fontWeight: 800 }}>
-          💪
-        </Typography>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>
           Mobile Trainer
         </Typography>

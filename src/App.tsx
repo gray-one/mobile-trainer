@@ -1,9 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import PrivateRoute from './components/PrivateRoute';
-import LoginPage from './pages/LoginPage';
-import WorkoutListPage from './pages/WorkoutListPage';
-import WorkoutRunnerPage from './pages/WorkoutRunnerPage';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import PrivateRoute from "./components/PrivateRoute";
+import LoginPage from "./pages/LoginPage";
+import WorkoutListPage from "./pages/WorkoutListPage";
+import WorkoutRunnerPage from "./pages/WorkoutRunnerPage";
+import WorkoutCreatorPage from "./pages/WorkoutCreatorPage";
 
 export default function App() {
   return (
@@ -24,6 +25,14 @@ export default function App() {
             element={
               <PrivateRoute>
                 <WorkoutRunnerPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/workout/create"
+            element={
+              <PrivateRoute>
+                <WorkoutCreatorPage />
               </PrivateRoute>
             }
           />

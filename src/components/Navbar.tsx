@@ -38,7 +38,7 @@ export default function Navbar() {
           variant="h6"
           sx={{ flexGrow: 1, fontWeight: 700, color: "primary.main" }}
         >
-          💪 Mobile Trainer
+          Mobile Trainer
         </Typography>
 
         <Tooltip title={mode === "dark" ? "Tryb jasny" : "Tryb ciemny"}>

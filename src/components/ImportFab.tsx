@@ -30,7 +30,6 @@ const TEMPLATE_JSON = `{
         "sets": [
           {
             "setNumber": 1,
-            "type": "circuit",
             "rounds": 3,
 
             "restBetweenRoundsSeconds": 90,
@@ -63,7 +62,6 @@ const TEMPLATE_JSON = `{
         "sets": [
           {
             "setNumber": 1,
-            "type": "standard",
             "rounds": 4,
 
             "restBetweenRoundsSeconds": 120,

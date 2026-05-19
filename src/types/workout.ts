@@ -9,7 +9,7 @@ export interface Exercise {
 
 export interface WorkoutSet {
   setNumber: number;
-  type: "circuit" | "standard";
+  type?: string;
   rounds: number;
   restBetweenRoundsSeconds: number;
   restAfterSetSeconds: number;

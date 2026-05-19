@@ -84,6 +84,20 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
               },
             },
           },
+          MuiDialog: {
+            styleOverrides: {
+              paper: {
+                backgroundColor: "#fff",
+              },
+            },
+          },
+          MuiListItem: {
+            styleOverrides: {
+              root: {
+                background: mode === "dark" ? "#2f231c" : "#fff6ee8c",
+              },
+            },
+          },
         },
       }),
     [mode],

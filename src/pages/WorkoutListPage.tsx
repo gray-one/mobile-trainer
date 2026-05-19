@@ -54,11 +54,11 @@ export default function WorkoutListPage() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMsg, setSnackbarMsg] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
-    "success"
+    "success",
   );
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [newWorkoutIds, setNewWorkoutIds] = useState<string[]>(() =>
-    readNewWorkoutIdsFromStorage()
+    readNewWorkoutIdsFromStorage(),
   );
   const navigate = useNavigate();
 
@@ -68,7 +68,7 @@ export default function WorkoutListPage() {
 
   const newWorkoutIdSet = useMemo(
     () => new Set(newWorkoutIds),
-    [newWorkoutIds]
+    [newWorkoutIds],
   );
 
   const toggleSelect = (id: string) => {
@@ -86,7 +86,7 @@ export default function WorkoutListPage() {
     if (!ids.length) return;
     try {
       await Promise.all(
-        ids.map((id) => deleteDoc(doc(db, "users", user.uid, "workouts", id)))
+        ids.map((id) => deleteDoc(doc(db, "users", user.uid, "workouts", id))),
       );
       setSnackbarMsg(`Usunięto ${ids.length} trening(ów)`);
       setSnackbarSeverity("success");
@@ -113,9 +113,18 @@ export default function WorkoutListPage() {
               : "Moje treningi"}
           </Typography>
           {!selectionMode ? (
-            <Button onClick={() => setSelectionMode(true)} variant="outlined">
-              Zaznacz
-            </Button>
+            <>
+              <Button
+                onClick={() => navigate("/workout/create")}
+                variant="contained"
+                size="small"
+              >
+                Nowy
+              </Button>
+              <Button onClick={() => setSelectionMode(true)} variant="outlined">
+                Zaznacz
+              </Button>
+            </>
           ) : (
             <>
               <IconButton

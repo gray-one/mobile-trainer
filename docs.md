@@ -57,7 +57,6 @@ Dodatkowe szczegóły importu:
       "sets": [
         {
           "setNumber": 1,
-          "type": "circuit",
           "rounds": 3,
           "restBetweenRoundsSeconds": 90,
           "restAfterSetSeconds": 180,
@@ -85,7 +84,6 @@ Dodatkowe szczegóły importu:
       "sets": [
         {
           "setNumber": 1,
-          "type": "standard",
           "rounds": 4,
           "restBetweenRoundsSeconds": 120,
           "restAfterSetSeconds": 180,
@@ -157,6 +155,67 @@ Jeśli w trakcie treningu użytkownik naciśnie X w rogu strony, trening jest an
 Na widoku z uploadem pliku znajduje się przycisk z ikoną pobierania, po jego naciśnięciu rozpoczyna się pobieranie pliku template.json zawierającego przykładowy szablon treningu (ten sam, który znajduje się już w textarea).
 Drugi przycisk z ikoną schowka/kopiowania kopiuje treść szablonu do schowka.
 
+## UC-8: Tworzenie planu treningowego
+
+Użytkownik może ręcznie utworzyć nowy trening bez importu JSON. Na stronie głównej (WorkoutListPage) obok przycisku "Importuj" widoczny jest przycisk "Nowy trening".
+
+### Flow tworzenia treningu:
+
+1. **Dane ogólne treningu**
+   - Użytkownik wprowadza: `name`, `description`, `scheduledAt` (data/godzina planowanego treningu)
+   - Przycisk "Dalej" przechodzi do dodawania setów
+
+2. **Dodawanie setów**
+   - Użytkownik klika "Dodaj nową serię (set)"
+   - Pojawia się formularz setu z polami:
+     - `setNumber` (auto-numerowanie)
+     - `rounds` (liczba rund)
+     - `restBetweenRoundsSeconds` (przerwa między rundami)
+     - `restAfterSetSeconds` (przerwa po całym secie)
+   - Przycisk "Dodaj ćwiczenie w tej serii"
+
+3. **Dodawanie ćwiczeń do setu**
+   - Użytkownik klika "Dodaj ćwiczenie w secie"
+   - Opcja A: **Wybierz z listy** — select zawierający wcześniej dodane ćwiczenia
+     - Po wyborze: parametry (`description`, `reps`, `equipment`, `duration`) autouzupełniają się z historii
+     - Użytkownik może wszystkie pola edytować (nadpisać)
+   - Opcja B: **Nowe ćwiczenie** — wpisuje nazwę + wszystkie parametry od zera
+   - Pola ćwiczenia: `name`, `description`, `reps` (liczba powtórzeń), `duration` (czas trwania w sekundach), `equipment` (nullable)
+
+4. **Finalizacja**
+   - Po dodaniu wszystkich setów i ćwiczeń, przycisk "Zapisz trening"
+   - Aplikacja waliduje strukturę (czy każdy set ma co najmniej jedno ćwiczenie, czy wszystkie wymagane pola są wypełnione)
+   - Jeśli walidacja OK: trening zapisywany w Firestore (`/users/{uid}/workouts/{newId}`)
+   - Powrót do listy treningów — nowo stworzony trening pojawia się na liście z etykietą `New`
+   - Jeśli błąd: wyświetlenie komunikatu walidacji
+
+### Reuse ćwiczeń:
+
+Przy każdym nowym ćwiczeniu aplikacja zbiera wszystkie wcześniej dodane nazwy ćwiczeń (z tego treningu i z historii użytkownika) i wyświetla je w **selectzie autouzupełniającym**.
+
+Gdy użytkownik wybierze nazwę z selecta, reszta pól (`description`, `reps`, `equipment`, `duration`) jest **automatycznie wypełniana** z ostatniego użycia tego ćwiczenia, ale zawsze może to zmienić.
+
+### Struktura zapisywanego dokumentu:
+
+Treningu stworzony ręcznie ma dokładnie tą samą strukturę co importowany:
+
+```json
+{
+  "name": "Mój custom trening",
+  "description": "...",
+  "scheduledAt": "2026-05-16T18:00:00Z",
+  "sets": [
+    {
+      "setNumber": 1,
+      "rounds": 3,
+      "restBetweenRoundsSeconds": 90,
+      "restAfterSetSeconds": 180,
+      "exercises": [...]
+    }
+  ]
+}
+```
+
 ---
 
 ## 4. Architektura danych (Firestore)
@@ -174,7 +233,6 @@ Drugi przycisk z ikoną schowka/kopiowania kopiuje treść szablonu do schowka.
     sets: array[
       {
         setNumber: number
-        type: string          // "circuit" | "standard"
         rounds: number
         restBetweenRoundsSeconds: number
         restAfterSetSeconds: number
